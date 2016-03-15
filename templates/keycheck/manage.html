@@ -1,5 +1,8 @@
 {% extends "keycheck/base.html" %}
 {% block content %}
 <h1>Success!</h1>
-<p>You're logged in as {{ user.get_username }}, Email {{ mail }}</p>
+<p>You're logged in as {{ user.get_username }}, Emails:</p>
+{% for m in mail %}
+<p><a href="mailto:{{ m }}">{{ m }}</a></p>
+{% endfor %}
 {% endblock %}

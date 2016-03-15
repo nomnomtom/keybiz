@@ -1,5 +1,6 @@
 {% extends "keycheck/base.html" %}
 {% block content %}
-<h1>It works!</h1>
-<p>This is a test site</p>
+	<h1>It works!</h1>
+	<p>This is a test site</p>
+	<p><a href="{% url 'manage' %}">Manage your GPG keys</a></p>
 {% endblock %}
