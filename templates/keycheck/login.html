@@ -1,0 +1,24 @@
+{% extends "keycheck/base.html" %}
+{% block content %}
+
+{% if form.errors %}
+<p>User not found or wrong password. Please try again.</p>
+{% endif %}
+
+<form method="post" action="{% url 'django.contrib.auth.views.login' %}">
+{% csrf_token %}
+<table>
+<tr>
+    <td>Username</td>
+    <td>{{ form.username }}</td>
+</tr>
+<tr>
+    <td>Password</td>
+    <td>{{ form.password }}</td>
+</tr>
+</table>
+
+<input type="submit" value="login" />
+</form>
+
+{% endblock %}
