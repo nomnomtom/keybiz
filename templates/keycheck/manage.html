@@ -1,8 +1,25 @@
 {% extends "keycheck/base.html" %}
 {% block content %}
-<h1>Success!</h1>
-<p>You're logged in as {{ user.get_username }}, Emails:</p>
-{% for m in mail %}
-<p><a href="mailto:{{ m }}">{{ m }}</a></p>
-{% endfor %}
+{% if errmsg %}
+<div class="alert alert-danger" role="alert">
+	<span class="glyphicon glyphicon-remove-circle" aria-hidden="true"></span>
+	{{ errmsg }}
+</div>
+{% endif %}
+
+{% if not keymail %}
+	<form method="POST" action="#">
+		{{ form.non_field_errors }}
+		{% csrf_token %}
+		<div class="form-group">
+			{{ form.keydata.errors }}
+			<label for="{{form.keydata.id_for_label}}">GPG Public Key</label>
+			{{ form.keydata }}
+		</div>
+		<button type="submit" class="btn btn-default">Add Key</button>
+	</form>
+{% else %}
+	<p>User Mails: {{ mail }}</p>
+	<p>Key Mails: {{ keymail }}</p>
+{% endif %}
 {% endblock %}
