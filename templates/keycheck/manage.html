@@ -6,8 +6,18 @@
 	{{ errmsg }}
 </div>
 {% endif %}
-
 {% if not keymail %}
+	<h3>Your Addresses</h3>
+	<ul>
+	{% for m in mail %}
+		<li><a href="mailto:{{ m }}">{{ m }}</a></li>
+		<ol>
+			{% for g in m.uploaded %}
+			<li>g</li>
+			{% endfor %}
+		</ol>
+	{% endfor %}
+	</ul>
 	<form method="POST" action="#">
 		{{ form.non_field_errors }}
 		{% csrf_token %}

@@ -7,8 +7,20 @@
 <body>
 {% include 'keycheck/navbar.html' %}
 <div class="container-fluid">
-{% block content%}
-{% endblock%}
+	<div class="row">
+		<div class="col-md-8">
+		{% block content%}
+		{% endblock%}
+		</div>
+		<div class="col-md-4">
+		<div class="panel panel-default">
+			<div class="panel-heading">How To print public key</div>
+			<div class="panel-body">
+				<p>Type in a terminal: <code>gpg --export --armor "&lt;email address&gt;"</code> or <code>gpg --export --armor "&lt;key id&gt;"</code>.</p>
+			</div>
+		</div>
+		</div>
+	</div>
 </div>
 </body>
 </html>

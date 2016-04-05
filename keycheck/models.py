@@ -11,6 +11,7 @@ class GpgKey(models.Model):
 	user = models.ForeignKey(User)
 	keydata = models.TextField()
 
+	#TODO: Import key to keyring
 	def getKeyID(self):
 		''' return long key id '''
 		p = Popen([settings.GPG_BIN, '--with-fingerprint', '--keyid-format', 'LONG'], stdout=PIPE, stderr=PIPE, stdin=PIPE)
@@ -56,3 +57,16 @@ class GpgKey(models.Model):
 
 	def __unicode__(self):
 		return self.getKeyID()
+
+class Mail(models.Model):
+	user = models.ForeignKey(User)
+	address = models.EmailField()
+	gpgkey = models.ManyToManyField(GpgKey) # add keys with mailobj.add(keyobj)
+	uploaded = [] # list of key ids that signed the email address
+
+	def sign(self, key):
+		uploaded.append(key.getKeyID())
+		return True
+
+	def __unicode__(self):
+		return self.address
