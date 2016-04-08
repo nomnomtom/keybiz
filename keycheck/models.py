@@ -49,13 +49,15 @@ class GpgKey(models.Model):
 		if key is False:
 			return False
 		for k in key:
-			groups = match(r"uid.*<(.*)>", k)
+			groups = match(r"uid.*<(.*)>", k) # mails are in lines starting with uid and are enclosed by <> at the very end
 			if groups:
 				mails.append(groups.group(1))
 		return mails
 
 	def save(self, *args, **kwargs):
-		'''override djangos save method to add key to keyring'''
+		'''
+		override djangos save method to add key to keyring
+		'''
 		tempkey = NamedTemporaryFile()
 		try:
 			tempkey.write(self.keydata)
@@ -65,16 +67,36 @@ class GpgKey(models.Model):
 			tempkey.close()
 		super(Model, self).save(*args, **kwargs)
 
+	def sendKey(self):
+		'''send myself to a key server'''
+		return True
+
 	def __unicode__(self):
 		return self.getKeyID()
 
 class Mail(models.Model):
 	user = models.ForeignKey(User)
 	address = models.EmailField()
-	gpgkey = models.ManyToManyField(GpgKey) # add keys with mailobj.add(keyobj)
-	#uploaded = [] # list of key ids that signed the email address
+	gpgkey = models.ManyToManyField(GpgKey) #make sure you sign this uid before adding
 
 	def sign(self, key):
+		# find uid number
+		uidlist = [] # list of uids without other key stuff
+		myuid = 0 # uids start at 1
+		for l in g.listKey():
+			if re.search(r"^uid", l):
+				uidlist.append(l)
+		for i,l in uidlist:
+			if str(self) in l:
+				myuid = i+1
+				break
+
+		# "gpg --default-cert-check-level 3 --edit-key 8E3DDB55C67FFA78 uid 3 sign save" and enter y
+		p = Popen([settings.GPG_BIN, '--default-cert-check-level', '3', '--edit-key', str(self.gpgkey), 'uid', str(myuid), 'sign', 'save'], stdout=PIPE, stderr=PIPE, stdin=PIPE)
+		out, err = p.communicate(input="y") #does anyone have a better idea?
+
+
+		# upload to key server
 		return True
 
 	def __unicode__(self):

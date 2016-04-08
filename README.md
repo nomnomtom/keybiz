@@ -25,3 +25,4 @@ AUTHENTICATION_BACKENDS = (
 
 * ``django_auth_ldap``
 * ``python-ldap``
+* ``gpg`` >= GPG 1.2.2rc1
