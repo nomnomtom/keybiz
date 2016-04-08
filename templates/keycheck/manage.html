@@ -8,16 +8,26 @@
 {% endif %}
 {% if not keymail %}
 	<h3>Your Addresses</h3>
-	<ul>
-	{% for m in mail %}
-		<li><a href="mailto:{{ m }}">{{ m }}</a></li>
-		<ol>
-			{% for g in m.uploaded %}
-			<li>g</li>
-			{% endfor %}
-		</ol>
-	{% endfor %}
-	</ul>
+	<table class="table">
+		<tr>
+			<th>Your Email Addresses</th>
+			<th>Uploaded Keys</th>
+		</tr>
+		{% for m in mail %}
+		<tr>
+			<td><a href="mailto:{{ m }}">{{ m }}</a></td>
+			<td>
+				<ul>
+				{% for g in m.gpgkey.all %}
+				<li>{{ g }}</li>
+				{% endfor %}
+				</ul>
+			</td>
+		</tr>
+		{% endfor %}
+	</table>
+
+	<h3>Add GPG Key</h3>
 	<form method="POST" action="#">
 		{{ form.non_field_errors }}
 		{% csrf_token %}

@@ -5,13 +5,12 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from subprocess import Popen, PIPE
 from re import match
+from tempfile import NamedTemporaryFile
 
 
 class GpgKey(models.Model):
-	user = models.ForeignKey(User)
-	keydata = models.TextField()
+	keydata = models.TextField(unique=True)
 
-	#TODO: Import key to keyring
 	def getKeyID(self):
 		''' return long key id '''
 		p = Popen([settings.GPG_BIN, '--with-fingerprint', '--keyid-format', 'LONG'], stdout=PIPE, stderr=PIPE, stdin=PIPE)
@@ -55,6 +54,17 @@ class GpgKey(models.Model):
 				mails.append(groups.group(1))
 		return mails
 
+	def save(self, *args, **kwargs):
+		'''override djangos save method to add key to keyring'''
+		tempkey = NamedTemporaryFile()
+		try:
+			tempkey.write(self.keydata)
+			p = Popen([settings.GPG_BIN, '--import', tempkey.name])
+			p.communicate() # wait for p to finish
+		finally:
+			tempkey.close()
+		super(Model, self).save(*args, **kwargs)
+
 	def __unicode__(self):
 		return self.getKeyID()
 
@@ -62,10 +72,9 @@ class Mail(models.Model):
 	user = models.ForeignKey(User)
 	address = models.EmailField()
 	gpgkey = models.ManyToManyField(GpgKey) # add keys with mailobj.add(keyobj)
-	uploaded = [] # list of key ids that signed the email address
+	#uploaded = [] # list of key ids that signed the email address
 
 	def sign(self, key):
-		uploaded.append(key.getKeyID())
 		return True
 
 	def __unicode__(self):

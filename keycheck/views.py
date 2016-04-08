@@ -17,7 +17,7 @@ def manage(request):
 	if request.method == "POST":
 		form = addKey(request.POST)
 		if form.is_valid():
-			key = GpgKey(keydata=form.cleaned_data['keydata'], user=request.user)
+			key = GpgKey(keydata=form.cleaned_data['keydata'])
 			keymails = key.getMails()
 			if keymails == []:
 				errmsg = "Could not extract mails from key, have you added your addresses to that key?"
@@ -25,10 +25,17 @@ def manage(request):
 				errmsg = "Could not read GPG data, is that key valid?"
 			else:
 				# save mails and add key to mails
-				key.save()
+				keycount = 0
 				for m in mails:
-					if m in keymails:
-						m.add(key)
+					if str(m) in keymails and key not in m.gpgkey.all():
+						if keycount == 0:
+							key.save() #save key iff we found an address.
+						m.gpgkey.add(key)
+						keycount += 1
+				if keycount > 0:
+					m.save()
+				else:
+					errmsg = "None of the key's uids matched your registered email addresses."
 	else:
 		form = addKey()
 		keymails = []

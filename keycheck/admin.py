@@ -1,3 +1,11 @@
 from django.contrib import admin
+from keycheck.models import GpgKey, Mail
 
-# Register your models here.
+@admin.register(GpgKey)
+class GpgKeyAdmin(admin.ModelAdmin):
+	fields = ['keydata']
+
+@admin.register(Mail)
+class MailAdmin(admin.ModelAdmin):
+	fields = ['user', 'address', 'gpgkey']
+
