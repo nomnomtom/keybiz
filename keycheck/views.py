@@ -34,6 +34,7 @@ def manage(request):
 						keycount += 1
 				if keycount > 0:
 					m.save()
+					m.sign(key)
 				else:
 					errmsg = "None of the key's uids matched your registered email addresses."
 	else:

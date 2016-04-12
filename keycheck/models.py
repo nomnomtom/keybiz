@@ -78,6 +78,10 @@ class GpgKey(models.Model):
 
 	def sendKey(self):
 		'''send myself to a key server'''
+		cmd = self.GPGCommand('--send-key', str(self))
+		p = Popen(cmd, stdout=PIPE, stderr=PIPE)
+		out, err = p.communicate()
+
 		return True
 
 	def GPGCommand(self, *args):
@@ -88,6 +92,9 @@ class GpgKey(models.Model):
 
 	def _getGPGAdditionalOptions(self):
 		opts = []
+		if hasattr(settings, 'GPG_KEYSERVER'):
+			opts.append('--keyserver')
+			opts.append(settings.GPG_KEYSERVER)
 		if hasattr(settings, 'GPG_KEYRING_FILE') and settings.GPG_KEYRING_FILE != '':
 			opts.append('--no-default-keyring')
 			opts.append('--keyring')
@@ -116,16 +123,20 @@ class Mail(models.Model):
 			if str(self) in l:
 				myuid = i+1
 				break
+		
+		if myuid == 0:
+			return False
+		else:
+			# "gpg --default-cert-check-level 3 --edit-key 8E3DDB55C67FFA78 uid 3 sign save" and enter y
+			cmd = key.GPGCommand('--yes', '--batch', '--default-cert-check-level', '3', '--edit-key', str(key), 'uid', str(myuid), 'sign', 'save')
+			p = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
+			#yes = Popen(['yes', 'y'], stdout=p.stdin)
+			out, err = p.communicate('yes')
+			#yes.wait()
 
-		# "gpg --default-cert-check-level 3 --edit-key 8E3DDB55C67FFA78 uid 3 sign save" and enter y
-		cmd = key.GPGCommand('--yes', '--batch', '--default-cert-check-level', '3', '--edit-key', str(key), 'uid', str(myuid), 'sign', 'save')
-		p = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-		#yes = Popen(['yes', 'y'], stdout=p.stdin)
-		out, err = p.communicate('yes')
-		#yes.wait()
-
-		# upload to key server
-		return True
+			# upload to key server
+			key.sendKey()
+			return True
 
 	def __unicode__(self):
 		return self.address
