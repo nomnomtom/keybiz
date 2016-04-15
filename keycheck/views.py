@@ -5,10 +5,20 @@ from keycheck.models import GpgKey, Mail
 from utils import updateUserMails
 
 def index(request):
+	'''
+	the index view should give an overview of keybiz's capabilities and show
+	some kind of login form. Whether or not a user is logged in should not
+	matter.
+	'''
 	return render(request, 'keycheck/index.html', {})
 
 @login_required
 def manage(request):
+	'''
+	the manage view allows users to review their email addresses and uploaded
+	keys. Users can upload a key which will be used to sign all the addresses
+	that also are present to the system.
+	'''
 	form = None
 	errmsg = None
 	keymails = []
@@ -39,5 +49,4 @@ def manage(request):
 					errmsg = "None of the key's uids matched your registered email addresses."
 	else:
 		form = addKey()
-		keymails = []
 	return render(request, 'keycheck/manage.html', {'form': form, 'mail': mails, 'keymail': keymails, 'errmsg': errmsg})

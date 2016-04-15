@@ -6,7 +6,15 @@
 	{{ errmsg }}
 </div>
 {% endif %}
-{% if not keymail %}
+{% if keymail %}
+<div class="alert alert-info" role="alert">
+	<span class="glyphicon glyphicon-saved" aria-hidden="true"></span>
+	<h4>New uids:</h4>
+	{% for m in keymail %}
+	<a href="mailto:{{ m }}">{{ m }}</a>
+	{% endfor %}
+</div>
+{% endif %}
 	<h3>Your Addresses</h3>
 	<table class="table">
 		<tr>
@@ -26,7 +34,7 @@
 		</tr>
 		{% endfor %}
 	</table>
-
+{% if not keymail %}
 	<h3>Add GPG Key</h3>
 	<form method="POST" action="#">
 		{{ form.non_field_errors }}
@@ -38,8 +46,5 @@
 		</div>
 		<button type="submit" class="btn btn-default">Add Key</button>
 	</form>
-{% else %}
-	<p>User Mails: {{ mail }}</p>
-	<p>Key Mails: {{ keymail }}</p>
 {% endif %}
 {% endblock %}
