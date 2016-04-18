@@ -1,6 +1,6 @@
 {% extends "keycheck/base.html" %}
 {% block content %}
-	<h1>It works!</h1>
-	<p>This is a test site</p>
-	<p><a href="{% url 'manage' %}">Manage your GPG keys</a></p>
+	<h1>KeyBiz</h1>
+	<p>KeyBiz allows you to upload your public GPG key and signs all uids found in your companies directory server. You can manage your keys and addresses after you <a href="{% url 'login' %}?next={% url 'manage' %}">log in.</a></p>
+	<a class="btn btn-default" href="{% url 'manage' %}" role="button">Manage your GPG Keys</a>
 {% endblock %}

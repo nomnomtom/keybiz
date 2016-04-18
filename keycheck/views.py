@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from keycheck.forms import addKey
 from keycheck.models import GpgKey, Mail
-from utils import updateUserMails
+from utils import updateUserMails, makeAdmin
 
 def index(request):
 	'''
@@ -24,6 +24,10 @@ def manage(request):
 	keymails = []
 	newmails = updateUserMails(request)
 	mails = Mail.objects.filter(user=request.user)
+
+	#XXX make user admin if they're in a list
+	makeAdmin(request) # Only if they're in a list. Don't worry.
+
 	if request.method == "POST":
 		form = addKey(request.POST)
 		if form.is_valid():

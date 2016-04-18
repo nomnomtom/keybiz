@@ -114,7 +114,7 @@ class GpgKey(models.Model):
 		out, err = p.communicate()
 		if out != '':
 			logger.debug("GPG output: %s" % (out))
-		if err != ''
+		if err != '':
 			logger.debug("GPG errors: %s" % (err))
 
  		return True

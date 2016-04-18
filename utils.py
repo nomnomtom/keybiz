@@ -1,5 +1,6 @@
 from keycheck.models import Mail
 from django.conf import settings
+from django.contrib.auth.models import User
 import logging
 
 def updateUserMails(request):
@@ -8,10 +9,10 @@ def updateUserMails(request):
 	addresses to the database
 	'''
 	logger = logging.getLogger('keybiz')
-	ldapmails = []
+	ldapMails = []
 	for mailattr in settings.AUTH_LDAP_MAIL_ATTRS:
-		ldapMails.append(request.user.ldap_user.attrs[mailattr])
-	ldapmails = list(set(ldapmails)) # make them unique
+		ldapMails += request.user.ldap_user.attrs[mailattr]
+	ldapMails = list(set(ldapMails)) # make them unique
 	userMails = Mail.objects.filter(user=request.user)
 	newMails = ldapMails
 
@@ -28,3 +29,10 @@ def updateUserMails(request):
 		newmail.save()
 
 	return newMails
+
+def makeAdmin(request):
+	adminlist = settings.USER_ADMINLIST
+	if str(request.user) in adminlist:
+		user = User.objects.get(username=str(request.user))
+		user.is_superuser = True
+		user.save()
