@@ -1,32 +1,130 @@
 # KEYBIZ
+End2End Encryption for e-Mail has posed a problem for ages. Various projects
+currently attempt to solve it. Among these are TES (trusted email services,
+https://blog.open-xchange.com/2015/02/26/trusted-email-services/ and the BMBF
+financed enzevalos project (https://www.inf.fu-berlin.de/groups/ag-si/enzevalos.html). 
+
+The key-idea of all these projects is, that each domain owner should run a
+key-server for his or her own domain, containing keys for all users at that
+domain. Keybiz is a small piece of software that allows individuals, 
+companies---everyone owning and/or controlling a domain to have users upload 
+their keys to a key-server in a verified manner. It integrates with an LDAP
+backend, so it should be compatible with Microsoft Exchange and ActiveDirectory.
+Keybiz and related software can be setup without requirering changes to the
+existing mail setup. For compliance, one just needs to create a set of DNS 
+records (and ideally DNSSEC sign ones domain).
 
 ## What is Keybiz
 
 Keybiz allows you to upload your public GnuPG keys in a web interface and signs all uids that are known through an authentication back end. The signed key will be uploaded to a key server. 
 
-Users should 
-## Installation
+
+# Keyserver/DNS Setup
+
+## Keyserver
+From you distribution, install SKS, a slim keyserver. Configure it as follows:
+```
+# use your FQDN here
+hostname: sks.example.org
+
+# we do not want to share keys with other servers
+recon_address: 127.0.0.1
+recon_port: 11370
+
+# key exchange protocol binding to localhost, so we can set up a proxy preventing
+# key uploads
+hkp_address: 127.0.0.1
+hkp_port: 11371
+```
+
+## HTTP key-proxy
+While access to the keyserver for Keybiz will be via localhost, we still need
+a proxy that does SSL and prevents uploading of keys from unknown sources.
+This example uses apache for that. If Keybiz is supposed to run on the same
+server, you will have to either use apache for it as well, or use nginx for
+reverseproxying requests.
+
+```
+<VirtualHost *:443>
+  ServerName fqdn
+
+  ## Vhost docroot
+  DocumentRoot /var/www
+
+
+
+  ## Directories, there should at least be a declaration for /var/www
+
+  ## Load additional static includes
+
+
+  ## Logging
+  ErrorLog /var/log/httpd/fqdn_error_ssl.log
+  ServerSignature Off
+  CustomLog /var/log/httpd/fqdn_access_ssl.log combined
+
+  ## Proxy rules
+  ProxyRequests Off
+
+  ProxyPass / http://localhost:11371/
+  
+  <Location />
+    ProxyPassReverse /
+  </Location>
+  
+
+
+  ## Rewrite rules
+  RewriteEngine On
+  RewriteCond %{REQUEST_METHOD} ^(POST)
+  RewriteRule .* - [F]
+
+  ## SSL directives
+  SSLEngine on
+  SSLCertificateFile      /etc/ssl/own/cert/fqdn.pem
+  SSLCertificateKeyFile   /etc/ssl/own/key/fqdn.pem
+  SSLCACertificatePath    /etc/pki/tls/certs
+  SSLProtocol             All -SSLv2 -SSLv3
+</VirtualHost>
+
+```
+
+## DNS Setup
+
+The required TLSA Record:
+```
+_443._tcp.HOST.DOMAIN.TLD. 86400 IN      TLSA    3 0 1 60E3DA034077DD2B8ACA6AEFC472A34300A4C4B1E4881B5F83373B4F 508EBB4A
+
+```
+
+The required SRV records:
+```
+_pgpkey-https._tcp.DOMAIN.TLD. 86400 IN  SRV     10 10 443 HOST.DOMAIN.TLD.
+_hkps._tcp.DOMAIN.TLD.   86400   IN      SRV     10 10 443 HOST.DOMAIN.TLD.
+```
+
+# Keybiz Installation
 
 Keybiz runs as a web application and requires a web server with wsgi capabilities (e.g. apache2). For installation instructions regarding wsgi applications with your web server refer to their read me documents.
 
 Since keybiz deals with sensitive data, an enforced encrypted HTTP connection is recommended.
 
-### Required Packages
+## Required Packages
 
 You need a LDAP server, a web server and a data base.
-#### From your package manager
+### From your package manager
 
 * ``python`` >= 2.7
 * ``python-dev``
 * ``libldap2-dev``
 * ``gnupg`` >= 1.2.2rc1
 
-#### From pip
+### From pip
 * ``django``
 * ``python-ldap``
 * ``django_auth_ldap``
 
-### Webserver Setup
+## Webserver Setup
 
 See <https://docs.djangoproject.com/en/1.9/howto/deployment/wsgi/modwsgi/>. The following is an example nginx configuration. Install nginx (e.g. ``apt install -y nginx``) and uwsgi with pip (e.g. ``pip install uwsgi``). You'll also need a SSL certificate chain for HTTPS connections.
 
