@@ -89,6 +89,19 @@ reverseproxying requests.
 
 ```
 
+## DNS Setup
+
+The required TLSA Record:
+```
+_443._tcp.HOST.DOMAIN.TLD. 86400 IN      TLSA    3 0 1 60E3DA034077DD2B8ACA6AEFC472A34300A4C4B1E4881B5F83373B4F 508EBB4A
+
+```
+
+The required SRV records:
+```
+_pgpkey-https._tcp.DOMAIN.TLD. 86400 IN  SRV     10 10 443 HOST.DOMAIN.TLD.
+_hkps._tcp.DOMAIN.TLD.   86400   IN      SRV     10 10 443 HOST.DOMAIN.TLD.
+```
 
 # Keybiz Installation
 
