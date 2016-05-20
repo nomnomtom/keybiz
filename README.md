@@ -19,7 +19,7 @@ records (and ideally DNSSEC sign ones domain).
 Keybiz allows you to upload your public GnuPG keys in a web interface and signs all uids that are known through an authentication back end. The signed key will be uploaded to a key server. 
 
 
-# Keyserver and Proxies
+# Keyserver/DNS Setup
 
 ## Keyserver
 From you distribution, install SKS, a slim keyserver. Configure it as follows:
@@ -35,6 +35,58 @@ recon_port: 11370
 # key uploads
 hkp_address: 127.0.0.1
 hkp_port: 11371
+```
+
+## HTTP key-proxy
+While access to the keyserver for Keybiz will be via localhost, we still need
+a proxy that does SSL and prevents uploading of keys from unknown sources.
+This example uses apache for that. If Keybiz is supposed to run on the same
+server, you will have to either use apache for it as well, or use nginx for
+reverseproxying requests.
+
+```
+<VirtualHost *:443>
+  ServerName fqdn
+
+  ## Vhost docroot
+  DocumentRoot /var/www
+
+
+
+  ## Directories, there should at least be a declaration for /var/www
+
+  ## Load additional static includes
+
+
+  ## Logging
+  ErrorLog /var/log/httpd/fqdn_error_ssl.log
+  ServerSignature Off
+  CustomLog /var/log/httpd/fqdn_access_ssl.log combined
+
+  ## Proxy rules
+  ProxyRequests Off
+
+  ProxyPass / http://localhost:11371/
+  
+  <Location />
+    ProxyPassReverse /
+  </Location>
+  
+
+
+  ## Rewrite rules
+  RewriteEngine On
+  RewriteCond %{REQUEST_METHOD} ^(POST)
+  RewriteRule .* - [F]
+
+  ## SSL directives
+  SSLEngine on
+  SSLCertificateFile      /etc/ssl/own/cert/fqdn.pem
+  SSLCertificateKeyFile   /etc/ssl/own/key/fqdn.pem
+  SSLCACertificatePath    /etc/pki/tls/certs
+  SSLProtocol             All -SSLv2 -SSLv3
+</VirtualHost>
+
 ```
 
 
