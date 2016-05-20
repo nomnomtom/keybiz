@@ -25,9 +25,6 @@ def manage(request):
 	newmails = updateUserMails(request)
 	mails = Mail.objects.filter(user=request.user)
 
-	#XXX make user admin if they're in a list
-	makeAdmin(request) # Only if they're in a list. Don't worry.
-
 	if request.method == "POST":
 		form = addKey(request.POST)
 		if form.is_valid():

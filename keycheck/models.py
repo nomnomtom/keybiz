@@ -155,11 +155,22 @@ class GpgKey(models.Model):
 		return self.getKeyID()
 
 class Mail(models.Model):
+	"""
+	Models an email address that has a user and some gpg keys.
+
+	Mails can be signed, mainly. For that, they need an attached gpg 
+	key. Signing the uid requires a newer GPG version, check the 
+	README.md file for more information.
+	"""
 	user = models.ForeignKey(User)
 	address = models.EmailField()
 	gpgkey = models.ManyToManyField(GpgKey) #make sure you sign this uid!
 
 	def sign(self, key):
+		"""
+		sign the uid with a key. If a uid is already signed, GPG should 
+		throw an error, so nothing bad will happen.
+		"""
 		if key not in self.gpgkey.all():
 			logger.warn("Tried to sign %s with key %s which has no related uid" % (str(self), str(key)))
 			return False
@@ -180,7 +191,7 @@ class Mail(models.Model):
 			logger.warn("Tried to sign email address %s with key %s, but found no matching uid" % (str(self), str(key)))
 			return False
 		else:
-			# "gpg --default-cert-check-level 3 --edit-key 8E3DDB55C67FFA78 uid 3 sign save" and enter y
+			# "gpg --default-cert-check-level 3 --edit-key XXXXXXXXXXXXXX uid 3 sign save" and enter y
 			cmd = key.GPGCommand('--yes', '--batch', '--default-cert-check-level', '3', '--edit-key', str(key), 'uid', str(myuid), 'sign', 'save')
 			logger.info("Signing key %s 's uid %d" % (str(key), myuid))
 			logger.debug("Command: %s" % (cmd))
