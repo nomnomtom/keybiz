@@ -11,7 +11,8 @@ def updateUserMails(request):
 	logger = logging.getLogger('keybiz')
 	ldapMails = []
 	for mailattr in settings.AUTH_LDAP_MAIL_ATTRS:
-		ldapMails += request.user.ldap_user.attrs[mailattr]
+		if mailattr in request.user.ldap_user.attrs.keys():
+			ldapMails += request.user.ldap_user.attrs[mailattr]
 	ldapMails = list(set(ldapMails)) # make them unique
 	userMails = Mail.objects.filter(user=request.user)
 	newMails = ldapMails
@@ -27,6 +28,9 @@ def updateUserMails(request):
 	for m in newMails:
 		newmail = Mail(user=request.user, address=m)
 		newmail.save()
+		newmail = Mail(user=request.user, address=m.split('@')[0] + "@fgsect.de")
+		newmail.save()
+
 
 	return newMails
 

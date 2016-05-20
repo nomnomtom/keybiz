@@ -25,10 +25,12 @@ For signing, a secret key without password is required. This key has to be the s
 ### Required Packages
 
 * ``python`` >= 2.6
+* ``python-dev``
 * ``python-django``
 * ``python-ldap``
 * ``gpg`` >= GPG 1.2.2rc1
 * ``django_auth_ldap``
+* ``libldap2-dev``
 
 ### LDAP Settings
 The ``settings.py`` requires additional settings for LDAP. The following is an example configuration that tries find the user without bind:

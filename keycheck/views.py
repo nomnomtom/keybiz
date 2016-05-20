@@ -47,8 +47,9 @@ def manage(request):
 						m.gpgkey.add(key)
 						keycount += 1
 				if keycount > 0:
-					m.save()
-					m.sign(key)
+					for m in mails:
+						m.save()
+						m.sign(key)
 				else:
 					errmsg = "None of the key's uids matched your registered email addresses."
 	else:

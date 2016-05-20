@@ -6,6 +6,7 @@ from django.conf import settings
 from subprocess import Popen, PIPE
 from re import match, search
 from tempfile import NamedTemporaryFile
+from os import remove
 import logging
 logger = logging.getLogger("keybiz")
 
@@ -44,7 +45,7 @@ class GpgKey(models.Model):
 			if out != '':
 				logger.debug("GPG output: %s" % (out))
 		finally:
-			tempkey.close() #TODO: instead: delete file
+			remove(tempkey.name)
 
 
 	def getKeyID(self):
