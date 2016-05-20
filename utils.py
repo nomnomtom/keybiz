@@ -28,9 +28,6 @@ def updateUserMails(request):
 	for m in newMails:
 		newmail = Mail(user=request.user, address=m)
 		newmail.save()
-		newmail = Mail(user=request.user, address=m.split('@')[0] + "@fgsect.de")
-		newmail.save()
-
 
 	return newMails
 
