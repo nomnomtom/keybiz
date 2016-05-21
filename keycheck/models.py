@@ -8,6 +8,7 @@ from re import match, search
 from tempfile import NamedTemporaryFile
 from os import remove
 import logging
+import hashlib
 logger = logging.getLogger("keybiz")
 
 class GpgKey(models.Model):
@@ -23,7 +24,8 @@ class GpgKey(models.Model):
 	uids (i.e. email addresses) and offers a function for exporting signed keys
 	to a hkp server.
 	'''
-	keydata = models.TextField(unique=True)
+	keydata = models.TextField(unique=False)
+	keyhash = models.CharField(max_length=10,default="",unique=True)
 
 	def __init__(self, *args, **kwargs):
 		'''
@@ -46,6 +48,10 @@ class GpgKey(models.Model):
 				logger.debug("GPG output: %s" % (out))
 		finally:
 			remove(tempkey.name)
+
+	def save(self, *args, **kwargs):
+		self.keyhash = hashlib.md5(self.keydata).hexdigest()
+		super(GpgKey, self).save(*args, **kwargs)
 
 
 	def getKeyID(self):
