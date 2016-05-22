@@ -95,13 +95,15 @@ DATABASES = {
 
 # GPG binary with full path
 GPG_BIN='/usr/bin/gpg'
-
+# Keyid of your secret key
+GPG_DEFAULT_KEY=""
 # optional, keyring file, make sure the web user has access to it
 # keybiz will use the default keyring if you comment this out
 #GPG_KEYRING_FILE=''
 # optional, url to your favourite key server, keybiz will use the
 # system default if you comment this out
 #GPG_KEYSERVER='hkp://keys.gnupg.net'
+
 
 
 # Password validation

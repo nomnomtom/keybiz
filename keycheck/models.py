@@ -37,7 +37,7 @@ class GpgKey(models.Model):
 		try:
 			tempkey.write(self.keydata)
 			tempkey.close() # we need to close this so the data is written >.<
-			cmd = self.GPGCommand('--import', tempkey.name)
+			cmd = GpgKey.GPGCommand('--import', tempkey.name)
 			p = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE) # import key to keyring
 			logger.info("Importing key to keyring")
 			logger.debug("Command %s" % (" ".join(cmd)))
@@ -56,7 +56,7 @@ class GpgKey(models.Model):
 
 	def getKeyID(self):
 		''' return long key id from key data, not key ring'''
-		cmd = self.GPGCommand('--with-fingerprint', '--keyid-format', 'LONG')
+		cmd = GpgKey.GPGCommand('--with-fingerprint', '--keyid-format', 'LONG')
 		p = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
 		logger.debug("Checking key ID")
 		logger.debug("Command %s" % (" ".join(cmd)))
@@ -82,7 +82,7 @@ class GpgKey(models.Model):
 		keyid = self.getKeyID()
 		if keyid is False:
 			return False
-		cmd = self.GPGCommand('--list-key', keyid)
+		cmd = GpgKey.GPGCommand('--list-key', keyid)
 		p = Popen(cmd, stdout=PIPE, stderr=PIPE)
 		out, err = p.communicate()
 		if out != '':
@@ -115,7 +115,7 @@ class GpgKey(models.Model):
 		this does not check whether or not the key is signed.
 		'''
 		logger.info("Sending key %s to hkp server" % (str(self)))
-		cmd = self.GPGCommand('--send-key', str(self))
+		cmd = GpgKey.GPGCommand('--send-key', str(self))
 		logger.debug("Command %s" % (" ".join(cmd)))
 		p = Popen(cmd, stdout=PIPE, stderr=PIPE)
 		out, err = p.communicate()
@@ -126,7 +126,8 @@ class GpgKey(models.Model):
 
  		return True
 
-	def GPGCommand(self, *args):
+	@staticmethod
+	def GPGCommand(*args):
 		'''
 		helper function for creating a GPG command
 
@@ -136,11 +137,12 @@ class GpgKey(models.Model):
 		       will be added to arguments from settings
 		'''
 		cmd = [settings.GPG_BIN]
-		cmd += self._getGPGAdditionalOptions()
+		cmd += GpgKey._getGPGAdditionalOptions()
 		cmd += list(args)
 		return cmd
 
-	def _getGPGAdditionalOptions(self):
+	@staticmethod
+	def _getGPGAdditionalOptions():
 		'''
 		return GPG args from settings
 		'''
@@ -152,6 +154,11 @@ class GpgKey(models.Model):
 			opts.append('--no-default-keyring')
 			opts.append('--keyring')
 			opts.append(settings.GPG_KEYRING_FILE)
+		if hasattr(settings, 'GPG_DEFAULT_KEY'):
+			opts.append('--default-key')
+			opts.append(settings.GPG_DEFAULT_KEY)
+		else:
+			logger.error("Option GPG_DEFAULT_KEY not found in settings.py!")
 		return opts
 
 	def __unicode__(self):
@@ -171,6 +178,129 @@ class Mail(models.Model):
 	user = models.ForeignKey(User)
 	address = models.EmailField()
 	gpgkey = models.ManyToManyField(GpgKey) #make sure you sign this uid!
+
+	def _getServerKeyID(self):
+		'''
+		checks with the key server if a key with the uid is available.
+
+		returns long key id or False
+		'''
+		logger.debug("Searching keyserver for uid %s" % (str(self)))
+		cmd = GpgKey.GPGCommand('--keyid-format', 'long', '--batch', '--search-key', self.address)
+		p = Popen(cmd, stdout=PIPE, stderr=PIPE)
+		out,err = p.communicate("") #sometimes, batch doesn't to squad
+		if out != "":
+			founduid = False
+			r = []
+			for l in out.split("\n"):
+				group = match(r"(\((d+)\))?.*<(.*@.*)>", l)
+				guid = match(r"[\t ]+\d+ bit.*key ([A-Z0-9]+)", l)
+				if (group):
+					if group.groups()[-1] == self.address:
+						founduid = True
+				elif (founduid and guid):
+					# we found the uid and now we have the key id
+					r.append(guid.groups()[-1])
+					founduid = False
+			return r
+		elif err != "":
+			logger.warn(err)
+		return False
+
+	def _downloadKey(self, keyid):
+		'''
+		download keyid from keyserver to keyring and return True
+		'''
+		logger.info("downloading new public keys for %s" % (str(self)))
+		cmd = GpgKey.GPGCommand('--batch', '--recv-key', keyid) #TODO: can we use --recv-keys for all ids?
+		p = Popen(cmd, stdout=PIPE, stderr=PIPE)
+		out,err = p.communicate()
+		if out != "":
+			logger.debug(out)
+		if err != "":
+			logger.warn(err)
+		return True
+	
+	def _checkSigs(self, keyid):
+		'''
+		return true if GPG_DEFAULT_KEY from settings.py is found amongst 
+		the signatures of keyid
+		'''
+		if not hasattr(settings, 'GPG_DEFAULT_KEY'):
+			logger.error("Option GPG_DEFAULT_KEY not found in settings.py!")
+			return False
+		if len(settings.GPG_DEFAULT_KEY) == 8:
+			cmd = GpgKey.GPGCommand('--batch', '--keyid-format', 'short', '--check-sigs', keyid)
+		elif len(settings.GPG_DEFAULT_KEY) == 16:
+			cmd = GpgKey.GPGCommand('--batch', '--keyid-format', 'long', '--check-sigs', keyid)
+		else:
+			return False
+		logger.debug("Searching signatures in key uid %s" % (str(self)))
+		logger.debug("GPG Command: %s" % (" ".join(cmd)))
+		p = Popen(cmd, stdout=PIPE, stderr=PIPE)
+		out,err = p.communicate()
+		if out != "":
+			founduid = False
+			for l in out.split("\n"):
+				group = match(r"^uid.*<(.*)>$", l)
+				sigg = match(r"^sig.* +([A-Z0-9]+) [\d\-]+", l)
+				if group:
+					if group.groups()[-1] == self.address:
+						logger.debug("Found uid in key, checking signatures...")
+						founduid = True
+					else:
+						logger.debug("No matching signatures found: %s" % (out))
+						founduid = False
+				elif sigg and founduid:
+					logger.debug("Checking signature %s" % (sigg.groups()[-1]))
+					if sigg.groups()[-1] == settings.GPG_DEFAULT_KEY:
+						return True
+		elif err != "":
+			logger.warn(err)
+		return False
+
+	def _importKeys(self):
+		"""
+		search keyserver for keys that are already signed and import them
+		to local data base so users see them and don't need to upload key
+		again
+		"""
+		# are any keys present on keyserver anyway?
+		# gpg -batch --search-keys 'uid'
+		uid = self._getServerKeyID()
+		if uid != False and uid != []:
+			# do we have any of these uids in our own db already?
+			for g in self.gpgkey.all():
+				gid = g.getKeyID()
+				if gid in uid:
+					uid.remove(gid)
+			# download the rest
+			for u in uid:
+				self._downloadKey(u)
+				if self._checkSigs(u) == True:
+					# here we found a key on the server that is not in our db AND signed by us.
+					cmd = GpgKey.GPGCommand('--batch', '--export', '--armor', u)
+					p = Popen(cmd, stdout=PIPE, stderr=PIPE)
+					out,err = p.communicate()
+					if out != "":
+						logger.info("Found new key %s on keyserver, importing for uid %s" % (u, str(self)))
+						newkey = GpgKey(keydata=out)
+						self.save()
+						newkey.save()
+						self.gpgkey.add(newkey)
+						self.save()
+					elif err != "":
+						logger.warn("Found new key %s on keyserver, but could not import for uid %s: %s" % (u, str(self), err))
+		else:
+			# No key is not on keyserver, so probably nothing signed by us.
+			return False
+
+	def __init__(self, *args, **kwargs):
+		'''
+		creates Mail object and checks for existing signatures
+		'''
+		super(Mail, self).__init__(*args, **kwargs)
+		self._importKeys()
 
 	def sign(self, key):
 		"""
@@ -198,7 +328,7 @@ class Mail(models.Model):
 			return False
 		else:
 			# "gpg --default-cert-check-level 3 --edit-key XXXXXXXXXXXXXX uid 3 sign save" and enter y
-			cmd = key.GPGCommand('--yes', '--batch', '--default-cert-check-level', '3', '--edit-key', str(key), 'uid', str(myuid), 'sign', 'save')
+			cmd = GpgKey.GPGCommand('--yes', '--batch', '--default-cert-check-level', '3', '--edit-key', str(key), 'uid', str(myuid), 'sign', 'save')
 			logger.info("Signing key %s 's uid %d" % (str(key), myuid))
 			logger.debug("Command: %s" % (cmd))
 			p = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
@@ -210,7 +340,7 @@ class Mail(models.Model):
 
 			# upload to key server
 			key.sendKey()
-			return True
+			return True 
 
 	def __unicode__(self):
 		return self.address

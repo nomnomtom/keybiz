@@ -231,7 +231,10 @@ python /opt/keybiz/manage.py migrate
 
 ### GPG Setup
 
-For signing, a secret key without password is required. This key has to be the standard signing key. Keybiz supports a separate key ring for its operations.
+For signing, a secret key without password is required. This key has to be the standard signing key. Keybiz supports a separate key ring for its operations. Required options in settings.py are:
+
+* ``GPG_BIN`` - Path to your GnuPG binary
+* ``GPG_DEFAULT_KEY`` - Key ID of your secret GnuPG key
 
 ### LDAP Settings
 The ``settings.py`` requires additional settings for LDAP. The following is an example configuration that tries find the user without bind:
