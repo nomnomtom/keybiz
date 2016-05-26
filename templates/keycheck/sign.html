@@ -1,0 +1,23 @@
+{% extends "keycheck/base.html" %}
+{% block content %}
+<h1>Sign Key</h1>
+{% if errmsg %}
+<div class="alert alert-danger" role="alert">
+    <span class="glyphicon glyphicon-remove-circle" aria-hidden="true"></span>
+    {{ errmsg }}
+</div>
+{% endif %}
+{% if not signKey %}
+	<pre>{{ gpgkey.keydata | linebreaks}}</pre>
+	<p><strong>Key ID:</strong> {{ gpgkey }} </p>
+	<a class="btn btn-default" href="{% url 'sign' gpgkey.id %}?sign=True" role="button">Sign</a> <a class="btn btn-default" href="{% url 'manage' %}" role="button">Cancel</a>
+{% else %}
+	{% if not errmsg %}
+	<div class="alert alert-success" role="alert">
+	    <span class="glyphicon glyphicon-ok-circle" aria-hidden="true"></span>
+		<p> Your key {{ gpgkey }} has been signed.</p>
+	</div>
+	{% endif%}
+	<a class="btn btn-default" href="{% url 'manage' %}" role="button">Back</a>
+{% endif %}
+{% endblock %}

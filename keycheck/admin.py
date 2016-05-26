@@ -3,7 +3,7 @@ from keycheck.models import GpgKey, Mail
 
 @admin.register(GpgKey)
 class GpgKeyAdmin(admin.ModelAdmin):
-	fields = ['keydata', 'keyhash']
+	fields = ['keydata', 'keyhash', 'signed']
 
 @admin.register(Mail)
 class MailAdmin(admin.ModelAdmin):

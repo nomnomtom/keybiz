@@ -25,7 +25,8 @@ class GpgKey(models.Model):
 	to a hkp server.
 	'''
 	keydata = models.TextField(unique=False)
-	keyhash = models.CharField(max_length=10,default="",unique=True)
+	keyhash = models.CharField(max_length=64,default="",unique=True)
+	signed = models.BooleanField(default=False)
 
 	def __init__(self, *args, **kwargs):
 		'''
@@ -188,7 +189,7 @@ class Mail(models.Model):
 		logger.debug("Searching keyserver for uid %s" % (str(self)))
 		cmd = GpgKey.GPGCommand('--keyid-format', 'long', '--batch', '--search-key', self.address)
 		p = Popen(cmd, stdout=PIPE, stderr=PIPE)
-		out,err = p.communicate("") #sometimes, batch doesn't to squad
+		out,err = p.communicate()
 		if out != "":
 			founduid = False
 			r = []
@@ -277,20 +278,21 @@ class Mail(models.Model):
 			# download the rest
 			for u in uid:
 				self._downloadKey(u)
-				if self._checkSigs(u) == True:
-					# here we found a key on the server that is not in our db AND signed by us.
-					cmd = GpgKey.GPGCommand('--batch', '--export', '--armor', u)
-					p = Popen(cmd, stdout=PIPE, stderr=PIPE)
-					out,err = p.communicate()
-					if out != "":
-						logger.info("Found new key %s on keyserver, importing for uid %s" % (u, str(self)))
-						newkey = GpgKey(keydata=out)
-						self.save()
-						newkey.save()
-						self.gpgkey.add(newkey)
-						self.save()
-					elif err != "":
-						logger.warn("Found new key %s on keyserver, but could not import for uid %s: %s" % (u, str(self), err))
+				cmd = GpgKey.GPGCommand('--batch', '--export', '--armor', u)
+				p = Popen(cmd, stdout=PIPE, stderr=PIPE)
+				out,err = p.communicate()
+				if out != "":
+					logger.info("Found new key %s on keyserver, importing for uid %s" % (u, str(self)))
+					newkey = GpgKey(keydata=out)
+					if self._checkSigs(newkey.getKeyID()):
+						# key is already signed
+						newkey.signed = True
+					self.save()
+					newkey.save()
+					self.gpgkey.add(newkey)
+					self.save()
+				elif err != "":
+					logger.warn("Found new key %s on keyserver, but could not import for uid %s: %s" % (u, str(self), err))
 		else:
 			# No key is not on keyserver, so probably nothing signed by us.
 			return False
@@ -340,6 +342,8 @@ class Mail(models.Model):
 
 			# upload to key server
 			key.sendKey()
+			key.signed = True
+			key.save()
 			return True 
 
 	def __unicode__(self):
