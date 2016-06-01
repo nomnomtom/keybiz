@@ -260,24 +260,9 @@ AUTHENTICATION_BACKENDS = (
 
 Note that keybiz *will not work* with other authentication backends. Please make sure you have your users authenticated according to common gpg signing practices before allowing them access to keybiz.
 
-### GPG Settings
+### Other Settings
 
-For GPG, additional settings are required in ``settings.py``.
-
-``GPG_BIN='/usr/bin/gpg'``
-Path to your GnuPG binary
-
-``GPG_KEYRING_FILE='/var/run/django/mykeyring``
-Optional key ring file, comment out to use standard key ring
-
-``GPG_KEYSERVER='hkp://keys.gnupg.net'``
-Optional key server, comment out to use standard key server
-
-
-## Management
-
-* admin interface
-* log in first
+Make sure to set your own ``SECRET_KEY`` in ``settings.py``. A good secret key can be generatet with the unix command ``pwgen -sy 64 1``.
 
 ## License
 
